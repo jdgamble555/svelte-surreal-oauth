@@ -4,7 +4,7 @@
 	let { data }: PageProps = $props();
 </script>
 
-<main class="flex flex-col items-center justify-center">
+<main class="mt-5 flex flex-col items-center justify-center">
 	<div class=" space-y-6">
 		<h2 class="text-4xl font-bold">Pages</h2>
 

@@ -15,22 +15,19 @@ export const load: PageServerLoad = async () => {
 
     if (dbError || !db) {
         console.error('Database connection error:', dbError);
-        throw error(500, dbError.message);
+        error(500, dbError.message);
     }
 
-    const results = await db.query('SELECT * FROM pages').collect<[About[]]>();
+    const [results] = await db.query('SELECT id.to_string(), name, description FROM pages').collect<[About[]]>();
 
     if (!results) {
         throw error(404, 'Not found');
     }
 
-    const pages = results[0].map((row) => ({
-        ...row,
-        id: row.id?.toString?.() ?? String(row.id)
-    }));
+    console.log(results);
 
     return {
-        result: pages
+        result: results
     };
 };
 

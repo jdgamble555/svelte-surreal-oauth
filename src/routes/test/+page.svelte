@@ -4,4 +4,15 @@
 	let { data }: PageProps = $props();
 </script>
 
-{JSON.stringify(data, null, 2)}
+<main class="flex flex-col items-center justify-center">
+	<div class=" space-y-6">
+		<h2 class="text-4xl font-bold">Pages</h2>
+
+		{#each data.result as page}
+			<article>
+				<h3>{page.name} (ID: {page.id})</h3>
+				<p>{page.description}</p>
+			</article>
+		{/each}
+	</div>
+</main>

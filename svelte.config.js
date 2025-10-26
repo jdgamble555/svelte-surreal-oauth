@@ -7,9 +7,17 @@ const config = {
 	// for more information about preprocessors
 	preprocess: vitePreprocess(),
 	kit: {
+		experimental: {
+			remoteFunctions: true
+		},
 		adapter: adapter({
 			runtime: 'edge'
 		})
+	},
+	compilerOptions: {
+		experimental: {
+			async: true
+		}
 	}
 };
 

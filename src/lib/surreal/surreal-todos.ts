@@ -1,12 +1,13 @@
 import { error } from "@sveltejs/kit";
 import { createSurrealServer, getCurrentUserId } from "./surreal-server";
-import { RecordId, Table } from "surrealdb";
+import { DateTime, eq, RecordId, StringRecordId, Table,  } from "surrealdb";
 
 type Todos = {
     id: string;
     completed: boolean;
     name: string;
     userId: RecordId;
+    createdAt: DateTime;
 };
 
 export async function getTodos() {
@@ -23,15 +24,16 @@ export async function getTodos() {
         error(500, dbError.message);
     }
 
-    const [result] = await db.query('SELECT id.to_string(), name, completed, userId.to_string() FROM todos WHERE userId = $userId', {
-        userId: new RecordId('users', userId.split(':')[1])
-    }).collect<[Todos[]]>();
+    const results = await db
+        .select<Todos>(new Table('todos'))
+        .fields('id.to_string()', 'name', 'completed', 'userId.to_string()', 'createdAt.to_string()')
+        .where(eq('userId', new RecordId('users', userId.split(':')[1])));    
 
-    if (!result) {
+    if (!results?.length) {
         error(404, 'Not found');
     }
 
-    return result;
+    return results;
 }
 
 export async function addTodo(name: string) {
@@ -52,7 +54,8 @@ export async function addTodo(name: string) {
         const result = await db.insert<Todos>(new Table('todos'), {
             name,
             completed: false,
-            userId: new RecordId('users', userId.split(':')[1])
+            userId: new RecordId('users', userId.split(':')[1]),
+            createdAt: new DateTime()
         });
 
         if (!result) {

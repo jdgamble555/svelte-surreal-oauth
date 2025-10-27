@@ -13,6 +13,6 @@ export const load: PageServerLoad = async () => {
     }
 
     return {
-        userId
+        userId: userId.id
     };
 };

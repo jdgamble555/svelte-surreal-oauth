@@ -30,7 +30,7 @@ export async function getTodos() {
         }).collect<[Todos[]]>();
 
     if (!results?.length) {
-        error(404, 'Not found');
+        return [];
     }
 
     return results;

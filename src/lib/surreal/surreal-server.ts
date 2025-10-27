@@ -61,6 +61,7 @@ export async function surrealLogin(username: string, password: string) {
     const { data: db, error: dbError } = await createSurrealServer();
 
     if (dbError) {
+        console.log(dbError);
         return {
             db: null,
             error: dbError
@@ -80,7 +81,10 @@ export async function surrealLogin(username: string, password: string) {
         access: 'user'
     }));
 
+    console.log(db);
+
     if (signInError) {
+        console.error('Sign-in error:', signInError);
         return {
             db: null,
             error: signInError

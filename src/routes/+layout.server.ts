@@ -7,6 +7,6 @@ export const load: LayoutServerLoad = async () => {
     const userId = getCurrentUserId();
 
     return {
-        userId
+        userId: userId?.id
     };
 };

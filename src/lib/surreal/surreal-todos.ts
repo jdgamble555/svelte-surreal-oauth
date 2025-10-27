@@ -14,7 +14,7 @@ export async function getTodos() {
 
     const userId = getCurrentUserId();
 
-    if (!userId) {
+    if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 
@@ -26,7 +26,7 @@ export async function getTodos() {
 
     const [results] = await db
         .query('SELECT id.to_string(), name, completed, userId.to_string(), createdAt.to_string() FROM todos WHERE userId = $userId ORDER BY createdAt.to_string() DESC', {
-            userId: new RecordId('users', userId.split(':')[1])
+            userId
         }).collect<[Todos[]]>();
 
     if (!results?.length) {
@@ -40,7 +40,7 @@ export async function addTodo(name: string) {
 
     const userId = getCurrentUserId();
 
-    if (!userId) {
+    if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 
@@ -54,7 +54,7 @@ export async function addTodo(name: string) {
         const result = await db.insert<Todos>(new Table('todos'), {
             name,
             completed: false,
-            userId: new RecordId('users', userId.split(':')[1]),
+            userId,
             createdAt: new DateTime()
         });
 
@@ -100,7 +100,7 @@ export async function deleteTodo(id: string) {
 
     const userId = getCurrentUserId();
 
-    if (!userId) {
+    if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 

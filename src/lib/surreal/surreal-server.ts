@@ -8,7 +8,7 @@ import {
 } from "$env/static/private";
 import { tryCatch } from "$lib/try-catch";
 import type { Cookies } from "@sveltejs/kit";
-import { Surreal } from "surrealdb";
+import { RecordId, Surreal } from "surrealdb";
 
 
 const COOKIE_OPTIONS = {
@@ -167,5 +167,7 @@ export function getCurrentUserId() {
         return null;
     }
 
-    return JSON.parse(atob(token.split('.')[1])).ID as string;
+    const user_id = JSON.parse(atob(token.split('.')[1])).ID as string;
+
+    return new RecordId('users', user_id.split(':')[1]);
 }

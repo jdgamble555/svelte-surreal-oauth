@@ -1,7 +1,6 @@
 import { form } from "$app/server";
 import { surrealLogin, surrealLogout, surrealRegister } from "$lib/surreal/surreal-server";
-import { redirect } from "@sveltejs/kit";
-import { error } from "console";
+import { error, redirect } from "@sveltejs/kit";
 import * as v from 'valibot';
 
 

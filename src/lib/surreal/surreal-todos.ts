@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
 import { createSurrealServer, getCurrentUserId } from "./surreal-server";
-import { DateTime, eq, RecordId, StringRecordId, Table,  } from "surrealdb";
+import { DateTime, RecordId, Table, } from "surrealdb";
 
 type Todos = {
     id: string;
@@ -24,10 +24,10 @@ export async function getTodos() {
         error(500, dbError.message);
     }
 
-    const results = await db
-        .select<Todos>(new Table('todos'))
-        .fields('id.to_string()', 'name', 'completed', 'userId.to_string()', 'createdAt.to_string()')
-        .where(eq('userId', new RecordId('users', userId.split(':')[1])));    
+    const [results] = await db
+        .query('SELECT id.to_string(), name, completed, userId.to_string(), createdAt.to_string() FROM todos WHERE userId = $userId ORDER BY createdAt.to_string() DESC', {
+            userId: new RecordId('users', userId.split(':')[1])
+        }).collect<[Todos[]]>();
 
     if (!results?.length) {
         error(404, 'Not found');

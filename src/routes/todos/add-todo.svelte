@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RecordId } from 'surrealdb';
+	import { DateTime, RecordId } from 'surrealdb';
 	import { addTodoForm, getTodosQuery } from './todos.remote';
 </script>
 
@@ -12,7 +12,8 @@
 						name: data.name,
 						completed: false,
 						id: 'temp-id',
-						userId: new RecordId('users', 'temp-user')
+						userId: new RecordId('users', 'temp-user'),
+                        createdAt: new DateTime()
 					},
                     ...todos
 				])

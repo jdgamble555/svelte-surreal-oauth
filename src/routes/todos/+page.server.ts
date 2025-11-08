@@ -6,13 +6,7 @@ export const load: PageServerLoad = async () => {
 
     const userId = getCurrentUserId();
 
-    if (!userId) {
-        return {
-            userId: null
-        };
-    }
-
     return {
-        userId
+        userId: userId?.id.toString() || null
     };
 };

@@ -16,7 +16,7 @@
 				<p class="text-red-500">Error loading todos: {query.error.message}</p>
 			{:else if query.loading}
 				<p>Loading todos...</p>
-			{:else if query.current}
+			{:else if query.current?.length}
 				<ul>
 					{#each query.current as { completed, name }}
 						<li>{name} - {completed}</li>

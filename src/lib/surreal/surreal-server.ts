@@ -9,6 +9,7 @@ import {
 import { tryCatch } from "$lib/try-catch";
 import type { Cookies } from "@sveltejs/kit";
 import { RecordId, Surreal } from "surrealdb";
+import { decodeJwt } from "./jwt";
 
 
 const COOKIE_OPTIONS = {
@@ -19,7 +20,8 @@ const COOKIE_OPTIONS = {
     maxAge: 60 * 30 // 30 minutes
 } as Parameters<Cookies['set']>[2];
 
-const SURREAL_COOKIE_NAME = 'surrealdb_token';
+const SURREAL_TOKEN = 'surreal_token';
+const SURREAL_REFRESH = 'surreal_refresh';
 
 const config = {
     url: PRIVATE_SURREALDB_URL,
@@ -42,8 +44,31 @@ export async function createSurrealServer() {
             database: config.database
         });
 
-        const surrealToken = cookies.get(SURREAL_COOKIE_NAME);
+        const surrealToken = cookies.get(SURREAL_TOKEN);
 
+        /*
+        if (decodeJwt(surrealToken || '').exp as number * 1000 < Date.now()) {
+            const surrealRefresh = cookies.get(SURREAL_REFRESH);    
+            if (surrealRefresh) {
+                const {
+                    data: refreshData,
+                    error: refreshError
+                } = await tryCatch(db.refresh(surrealRefresh));
+                if (refreshError) {
+                    throw refreshError;
+                }
+                const { access, refresh } = refreshData;
+
+                if (refresh) {
+                    cookies.set(SURREAL_REFRESH, refresh, COOKIE_OPTIONS);
+                }
+
+                if (access) {
+                    cookies.set(SURREAL_TOKEN, access, COOKIE_OPTIONS);
+                }
+            }
+        }
+        */
         if (surrealToken) {
             await db.authenticate(surrealToken);
         }
@@ -81,8 +106,6 @@ export async function surrealLogin(username: string, password: string) {
         access: 'user'
     }));
 
-    console.log(db);
-
     if (signInError) {
         console.error('Sign-in error:', signInError);
         return {
@@ -91,11 +114,19 @@ export async function surrealLogin(username: string, password: string) {
         };
     }
 
-    const { token } = signInData;
+    const { access, refresh } = signInData;
+
+    if (refresh) {
+        cookies.set(
+            SURREAL_REFRESH,
+            refresh,
+            COOKIE_OPTIONS
+        );
+    }
 
     cookies.set(
-        SURREAL_COOKIE_NAME,
-        token,
+        SURREAL_TOKEN,
+        access,
         COOKIE_OPTIONS
     );
 
@@ -138,11 +169,19 @@ export async function surrealRegister(username: string, password: string) {
         };
     }
 
-    const { token } = signInData;
+    const { access, refresh } = signInData;
+
+    if (refresh) {
+        cookies.set(
+            SURREAL_REFRESH,
+            refresh,
+            COOKIE_OPTIONS
+        );
+    }
 
     cookies.set(
-        SURREAL_COOKIE_NAME,
-        token,
+        SURREAL_TOKEN,
+        access,
         COOKIE_OPTIONS
     );
 
@@ -157,7 +196,7 @@ export async function surrealLogout() {
 
     const { cookies } = getRequestEvent();
 
-    cookies.delete(SURREAL_COOKIE_NAME, COOKIE_OPTIONS);
+    cookies.delete(SURREAL_TOKEN, COOKIE_OPTIONS);
 };
 
 
@@ -165,13 +204,13 @@ export function getCurrentUserId() {
 
     const { cookies } = getRequestEvent();
 
-    const token = cookies.get(SURREAL_COOKIE_NAME);
+    const token = cookies.get(SURREAL_TOKEN);
 
     if (!token) {
         return null;
     }
 
-    const user_id = JSON.parse(atob(token.split('.')[1])).ID as string;
+    const user_id = decodeJwt(token).ID as string;
 
     return new RecordId('users', user_id.split(':')[1]);
 }

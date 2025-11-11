@@ -1,5 +1,5 @@
 import { form } from "$app/server";
-import { surrealLogin, surrealLogout, surrealRegister } from "$lib/surreal/surreal-server";
+import { login, logout, register } from "$lib/surreal/surreal-server";
 import { error, redirect } from "@sveltejs/kit";
 import * as v from 'valibot';
 
@@ -9,11 +9,11 @@ const authSchema = v.object({
     password: v.string()
 });
 
-export const login = form(
+export const loginForm = form(
     authSchema,
     async ({ username, password }) => {
     
-        const { error: loginError } = await surrealLogin(username, password);
+        const { error: loginError } = await login(username, password);
 
         if (loginError) {
             error(401, loginError.message);
@@ -23,11 +23,11 @@ export const login = form(
     }
 );
 
-export const register = form(
+export const registerForm = form(
     authSchema,
     async ({ username, password }) => {
     
-        const { error: loginError } = await surrealRegister(username, password);
+        const { error: loginError } = await register(username, password);
 
         if (loginError) {
             error(401, loginError.message);
@@ -37,9 +37,9 @@ export const register = form(
     }
 );
 
-export const logout = form('unchecked', async () => {
+export const logoutForm = form('unchecked', () => {
     
-    await surrealLogout();
+    logout();
 
     redirect(303, '/');    
 });

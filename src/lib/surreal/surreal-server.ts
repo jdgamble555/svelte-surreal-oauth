@@ -1,15 +1,13 @@
 import { getRequestEvent } from "$app/server";
-import {
-    PRIVATE_SURREALDB_DATABASE,
-    PRIVATE_SURREALDB_NAMESPACE,
-    PRIVATE_SURREALDB_PASSWORD,
-    PRIVATE_SURREALDB_URL,
-    PRIVATE_SURREALDB_USERNAME
-} from "$env/static/private";
-import { tryCatch } from "$lib/try-catch";
 import type { Cookies } from "@sveltejs/kit";
-import { RecordId, Surreal } from "surrealdb";
-import { decodeJwt } from "./jwt";
+import { RecordId } from "surrealdb";
+import { decodeJwt, isExpired } from "./jwt";
+import {
+    surrealConnect,
+    surrealLogin,
+    surrealRefresh,
+    surrealRegister
+} from "./surreal-auth";
 
 
 const COOKIE_OPTIONS = {
@@ -23,70 +21,99 @@ const COOKIE_OPTIONS = {
 const SURREAL_TOKEN = 'surreal_token';
 const SURREAL_REFRESH = 'surreal_refresh';
 
-const config = {
-    url: PRIVATE_SURREALDB_URL,
-    namespace: PRIVATE_SURREALDB_NAMESPACE,
-    database: PRIVATE_SURREALDB_DATABASE,
-    username: PRIVATE_SURREALDB_USERNAME,
-    password: PRIVATE_SURREALDB_PASSWORD
-};
 
-export async function createSurrealServer() {
+export async function createServer() {
 
     const { cookies } = getRequestEvent();
 
-    const db = new Surreal();
+    const surrealToken = cookies.get(SURREAL_TOKEN);
 
-    return await tryCatch((async () => {
+    const { data: db, error: connectError } = await surrealConnect();
 
-        await db.connect(config.url, {
-            namespace: config.namespace,
-            database: config.database
-        });
+    if (connectError) {
+        return {
+            data: null,
+            error: connectError
+        };
+    }
 
-        const surrealToken = cookies.get(SURREAL_TOKEN);
+    if (!surrealToken) {
+        return {
+            data: db,
+            error: null
+        };
+    }
 
-        /*
-        if (decodeJwt(surrealToken || '').exp as number * 1000 < Date.now()) {
-            const surrealRefresh = cookies.get(SURREAL_REFRESH);    
-            if (surrealRefresh) {
-                const {
-                    data: refreshData,
-                    error: refreshError
-                } = await tryCatch(db.refresh(surrealRefresh));
-                if (refreshError) {
-                    throw refreshError;
-                }
-                const { access, refresh } = refreshData;
+    if (isExpired(surrealToken)) {
 
-                if (refresh) {
-                    cookies.set(SURREAL_REFRESH, refresh, COOKIE_OPTIONS);
-                }
+        const refreshToken = cookies.get(SURREAL_REFRESH);
 
-                if (access) {
-                    cookies.set(SURREAL_TOKEN, access, COOKIE_OPTIONS);
-                }
-            }
-        }
-        */
-        if (surrealToken) {
-            await db.authenticate(surrealToken);
+        if (!refreshToken) {
+
+            logout();
+
+            return {
+                data: db,
+                error: null
+            };
         }
 
-        return db;
-    })());
+        const {
+            data: refreshData,
+            error: refreshError
+        } = await surrealRefresh(db, refreshToken);
+
+        if (refreshError) {
+
+            logout();
+
+            return {
+                data: null,
+                error: refreshError
+            };
+        }
+
+        const { access, refresh } = refreshData;
+
+        cookies.set(
+            SURREAL_TOKEN,
+            access,
+            COOKIE_OPTIONS
+        );
+
+        if (refresh) {
+            cookies.set(
+                SURREAL_REFRESH,
+                refresh,
+                COOKIE_OPTIONS
+            );
+        }
+
+        await db.authenticate(access);
+
+        return {
+            data: db,
+            error: null
+        };
+    }
+
+    await db.authenticate(surrealToken);
+
+    return {
+        data: db,
+        error: null
+    };
 }
 
-export async function surrealLogin(username: string, password: string) {
+export async function login(username: string, password: string) {
 
-    // TODO - case where cookie exists
+    logout();
 
     const { cookies } = getRequestEvent();
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
-        console.log(dbError);
         return {
             db: null,
             error: dbError
@@ -94,27 +121,18 @@ export async function surrealLogin(username: string, password: string) {
     }
 
     const {
-        error: signInError,
-        data: signInData
-    } = await tryCatch(db.signin({
-        namespace: config.namespace,
-        database: config.database,
-        variables: {
-            username,
-            password
-        },
-        access: 'user'
-    }));
+        data: loginData,
+        error: loginError
+    } = await surrealLogin(db, username, password);
 
-    if (signInError) {
-        console.error('Sign-in error:', signInError);
+    if (loginError) {
         return {
             db: null,
-            error: signInError
+            error: loginError
         };
     }
 
-    const { access, refresh } = signInData;
+    const { access, refresh } = loginData;
 
     if (refresh) {
         cookies.set(
@@ -136,11 +154,13 @@ export async function surrealLogin(username: string, password: string) {
     };
 };
 
-export async function surrealRegister(username: string, password: string) {
+export async function register(username: string, password: string) {
+
+    logout();
 
     const { cookies } = getRequestEvent();
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         return {
@@ -150,26 +170,18 @@ export async function surrealRegister(username: string, password: string) {
     }
 
     const {
-        error: signInError,
-        data: signInData
-    } = await tryCatch(db.signup({
-        namespace: config.namespace,
-        database: config.database,
-        variables: {
-            username,
-            password
-        },
-        access: 'user'
-    }));
+        data: registerData,
+        error: registerError
+    } = await surrealRegister(db, username, password);
 
-    if (signInError) {
+    if (registerError) {
         return {
             db: null,
-            error: signInError
+            error: registerError
         };
     }
 
-    const { access, refresh } = signInData;
+    const { access, refresh } = registerData;
 
     if (refresh) {
         cookies.set(
@@ -191,17 +203,16 @@ export async function surrealRegister(username: string, password: string) {
     };
 };
 
-
-export async function surrealLogout() {
+export function logout() {
 
     const { cookies } = getRequestEvent();
 
     cookies.delete(SURREAL_TOKEN, COOKIE_OPTIONS);
+    cookies.delete(SURREAL_REFRESH, COOKIE_OPTIONS);
 };
 
-
-export function getCurrentUserId() {
-
+export function getUser() {
+    
     const { cookies } = getRequestEvent();
 
     const token = cookies.get(SURREAL_TOKEN);
@@ -210,7 +221,21 @@ export function getCurrentUserId() {
         return null;
     }
 
-    const user_id = decodeJwt(token).ID as string;
-
-    return new RecordId('users', user_id.split(':')[1]);
+    return decodeJwt(token).ID as string;
 }
+
+
+export function getUserRecordId() {
+
+    const user_id = getUser();
+    
+    if (!user_id) {
+        return null;
+    }
+
+    const [table, id] = user_id.split(':');
+
+    return new RecordId(table, id);
+}
+
+

@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import { createSurrealServer } from "./surreal-server";
+import { createServer } from "./surreal-server";
 
 type Pages = {
     description: string;
@@ -8,14 +8,24 @@ type Pages = {
 };
 
 export async function getPages() {
-    
-    const { data: db, error: dbError } = await createSurrealServer();
+
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         error(500, dbError.message);
     }
 
-    const [result] = await db.query('SELECT id.to_string(), name, description FROM pages').collect<[Pages[]]>();
+    const [result] = await db
+        .query(
+            `
+            SELECT
+                id.to_string(),
+                name,
+                description
+            FROM pages
+            `
+        )
+        .collect<[Pages[]]>();
 
     if (!result) {
         error(404, 'Not found');

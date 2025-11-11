@@ -1,12 +1,12 @@
-import { getCurrentUserId } from '$lib/surreal/surreal-server';
+import { getUser } from '$lib/surreal/surreal-server';
 import type { PageServerLoad } from './$types';
 
 
 export const load: PageServerLoad = async () => {
 
-    const userId = getCurrentUserId();
+    const userId = getUser();
 
     return {
-        userId: userId?.id.toString() || null
+        userId
     };
 };

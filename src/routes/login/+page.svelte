@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { login } from './auth.remote';
+	import { loginForm } from './auth.remote';
 
-	const { username, password } = login.fields;
+	const { username, password } = loginForm.fields;
 </script>
 
 <section>
 	<h1 class="text-2xl font-bold">Login</h1>
 
-	<form class="mt-10 flex flex-col items-center justify-center space-y-6" {...login}>
+	<form class="mt-10 flex flex-col items-center justify-center space-y-6" {...loginForm}>
 		<input class="rounded-lg border p-3" {...username.as('text')} placeholder="Username" />
 		<input class="rounded-lg border p-3" {...password.as('password')} placeholder="Password" />
 		<button class="rounded-lg border bg-blue-500 p-3 text-white">Login</button>

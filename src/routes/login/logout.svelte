@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { logout } from './auth.remote';
+	import { logoutForm } from './auth.remote';
 </script>
 
-<form {...logout}>
+<form {...logoutForm}>
 	<button type="submit" class="cursor-pointer"> Logout </button>
 </form>

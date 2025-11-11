@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import { createSurrealServer, getCurrentUserId } from "./surreal-server";
+import { createServer, getUserRecordId } from "./surreal-server";
 import { DateTime, RecordId, Table, } from "surrealdb";
 
 type Todos = {
@@ -12,22 +12,34 @@ type Todos = {
 
 export async function getTodos() {
 
-    const userId = getCurrentUserId();
+    const userId = getUserRecordId();
 
     if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         error(500, dbError.message);
     }
 
     const [results] = await db
-        .query('SELECT id.to_string(), name, completed, userId.to_string(), createdAt.to_string() FROM todos WHERE userId = $userId ORDER BY createdAt.to_string() DESC', {
-            userId
-        }).collect<[Todos[]]>();
+        .query(
+            `
+            SELECT
+                id.to_string(),
+                name,
+                completed,
+                userId.to_string(),
+                createdAt.to_string()
+            FROM todos
+            WHERE userId = $userId
+            ORDER BY createdAt.to_string() DESC
+            `,
+            { userId }
+        )
+        .collect<[Todos[]]>();
 
     if (!results?.length) {
         return [];
@@ -38,13 +50,13 @@ export async function getTodos() {
 
 export async function addTodo(name: string) {
 
-    const userId = getCurrentUserId();
+    const userId = getUserRecordId();
 
     if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         error(500, dbError.message);
@@ -71,23 +83,33 @@ export async function addTodo(name: string) {
 
 export async function toggleTodo(id: string, completed: boolean) {
 
-    const userId = getCurrentUserId();
+    const userId = getUserRecordId();
 
     if (!userId) {
         error(401, 'Unauthorized');
     }
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         error(500, dbError.message);
     }
 
-    const [result] = await db.query('UPDATE todos SET completed = $completed WHERE id = $id AND userId = $userId', {
-        id,
-        completed,
-        userId
-    }).collect<[Todos[]]>();
+    const [result] = await db
+        .query(
+            `
+            UPDATE todos
+            SET completed = $completed
+            WHERE id = $id
+            AND userId = $userId
+            `,
+            {
+                id,
+                completed,
+                userId
+            }
+        )
+        .collect<[Todos[]]>();
 
     if (!result) {
         error(500, 'Failed to toggle todo');
@@ -98,21 +120,31 @@ export async function toggleTodo(id: string, completed: boolean) {
 
 export async function deleteTodo(id: string) {
 
-    const userId = getCurrentUserId();
+    const userId = getUserRecordId();
 
     if (!userId?.id) {
         error(401, 'Unauthorized');
     }
 
-    const { data: db, error: dbError } = await createSurrealServer();
+    const { data: db, error: dbError } = await createServer();
 
     if (dbError) {
         error(500, dbError.message);
     }
 
-    const [result] = await db.query('DELETE FROM todos WHERE id = $id AND userId = $userId', {
-        id, userId
-    }).collect<[Todos[]]>();
+    const [result] = await db
+        .query(
+            `
+            DELETE FROM todos
+            WHERE id = $id
+            AND userId = $userId
+            `,
+            {
+                id,
+                userId
+            }
+        )
+        .collect<[Todos[]]>();
 
     if (!result) {
         error(500, 'Failed to delete todo');

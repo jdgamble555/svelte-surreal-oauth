@@ -1,7 +1,7 @@
 import { getRequestEvent } from "$app/server";
 import type { Cookies } from "@sveltejs/kit";
 import { RecordId } from "surrealdb";
-import { decodeJwt, isExpired } from "./jwt";
+import { decodeJwt } from "./jwt";
 import {
     surrealConnect,
     surrealLogin,
@@ -10,13 +10,21 @@ import {
 } from "./surreal-auth";
 
 
-const COOKIE_OPTIONS = {
+// 30 minutes
+const TOKEN_COOKIE_OPTIONS = {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 30 // 30 minutes
+    maxAge: 60 * 30
 } as Parameters<Cookies['set']>[2];
+
+// 7 days
+const REFRESH_COOKIE_OPTIONS = {
+    ...TOKEN_COOKIE_OPTIONS,
+    maxAge: 60 * 60 * 24 * 7
+} as Parameters<Cookies['set']>[2];
+
 
 const SURREAL_TOKEN = 'surreal_token';
 const SURREAL_REFRESH = 'surreal_refresh';
@@ -38,59 +46,61 @@ export async function createServer() {
         };
     }
 
-    if (!surrealToken) {
+    // not logged in
+
+    if (!refreshToken) {
+
+        logout();
+
         return {
             data: db,
             error: null
         };
     }
 
-    if (isExpired(surrealToken)) {
+    // Token still okay
 
-        if (!refreshToken) {
+    if (surrealToken) {
 
-            //logout();
+        await db.authenticate(surrealToken);
 
-            console.log('No refresh token, logging out');
+        return {
+            data: db,
+            error: null
+        };
+    }
 
-            return {
-                data: db,
-                error: null
-            };
-        }
+    // Token expired, try to refresh
 
-        const {
-            data: refreshData,
+    const {
+        data: refreshData,
+        error: refreshError
+    } = await surrealRefresh(db, refreshToken);
+
+    if (refreshError) {
+
+        logout();
+
+        return {
+            data: null,
             error: refreshError
-        } = await surrealRefresh(db, refreshToken);
+        };
+    }
 
-        if (refreshError) {
+    const { access, refresh } = refreshData;
 
-            // logout();
+    cookies.set(
+        SURREAL_TOKEN,
+        access,
+        TOKEN_COOKIE_OPTIONS
+    );
 
-            console.log('Refresh error, logging out');
-
-            return {
-                data: null,
-                error: refreshError
-            };
-        }
-
-        const { access, refresh } = refreshData;
-
+    if (refresh) {
         cookies.set(
-            SURREAL_TOKEN,
-            access,
-            COOKIE_OPTIONS
+            SURREAL_REFRESH,
+            refresh,
+            REFRESH_COOKIE_OPTIONS
         );
-
-        if (refresh) {
-            cookies.set(
-                SURREAL_REFRESH,
-                refresh,
-                COOKIE_OPTIONS
-            );
-        }
 
         await db.authenticate(access);
 
@@ -98,9 +108,12 @@ export async function createServer() {
             data: db,
             error: null
         };
+
     }
 
-    await db.authenticate(surrealToken);
+    // Can't refresh, logout
+
+    logout();
 
     return {
         data: db,
@@ -135,22 +148,20 @@ export async function login(username: string, password: string) {
         };
     }
 
-    console.log(loginData);
-
     const { access, refresh } = loginData;
 
     if (refresh) {
         cookies.set(
             SURREAL_REFRESH,
             refresh,
-            COOKIE_OPTIONS
+            REFRESH_COOKIE_OPTIONS
         );
     }
 
     cookies.set(
         SURREAL_TOKEN,
         access,
-        COOKIE_OPTIONS
+        TOKEN_COOKIE_OPTIONS
     );
 
     return {
@@ -186,22 +197,20 @@ export async function register(username: string, password: string) {
         };
     }
 
-    console.log(registerData);
-
     const { access, refresh } = registerData;
 
     if (refresh) {
         cookies.set(
             SURREAL_REFRESH,
             refresh,
-            COOKIE_OPTIONS
+             REFRESH_COOKIE_OPTIONS
         );
     }
 
     cookies.set(
         SURREAL_TOKEN,
         access,
-        COOKIE_OPTIONS
+        TOKEN_COOKIE_OPTIONS
     );
 
     return {
@@ -218,11 +227,11 @@ export function logout() {
     const refresh = cookies.get(SURREAL_REFRESH);
 
     if (token) {
-        cookies.delete(SURREAL_TOKEN, COOKIE_OPTIONS);
+        cookies.delete(SURREAL_TOKEN, TOKEN_COOKIE_OPTIONS);
     }
 
     if (refresh) {
-        cookies.delete(SURREAL_REFRESH, COOKIE_OPTIONS);
+        cookies.delete(SURREAL_REFRESH, REFRESH_COOKIE_OPTIONS);
     }
 };
 

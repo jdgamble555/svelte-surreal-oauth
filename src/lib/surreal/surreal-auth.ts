@@ -7,6 +7,7 @@ import {
     PRIVATE_SURREALDB_USERNAME
 } from "$env/static/private";
 
+
 const config = {
     url: PRIVATE_SURREALDB_URL,
     namespace: PRIVATE_SURREALDB_NAMESPACE,
@@ -110,7 +111,7 @@ export async function surrealRefresh(
     const { token, refresh } = await res.json();
 
     return {
-        data: { access: token, refresh },
+        data: { access: token, refresh } as { access: string; refresh?: string },
         error: null
     };
 }
@@ -146,12 +147,10 @@ export async function surrealLogin(
     const { token, refresh } = await res.json();
 
     return {
-        data: { access: token, refresh },
+        data: { access: token, refresh } as { access: string; refresh?: string },
         error: null
     };
 }
-
-
 
 export async function _surrealLogin(
     db: Surreal,

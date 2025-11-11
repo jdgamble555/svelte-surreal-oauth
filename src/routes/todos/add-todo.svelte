@@ -13,9 +13,9 @@
 						completed: false,
 						id: 'temp-id',
 						userId: new RecordId('users', 'temp-user'),
-                        createdAt: new DateTime()
+						createdAt: new DateTime()
 					},
-                    ...todos
+					...todos
 				])
 			);
 			form.reset();
@@ -29,6 +29,7 @@
 		class="rounded-lg border p-3"
 		{...addTodoForm.fields.name.as('text')}
 		placeholder="Todo Name"
+		autocomplete="off"
 	/>
 	<button type="submit" class="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
 		Add Todo

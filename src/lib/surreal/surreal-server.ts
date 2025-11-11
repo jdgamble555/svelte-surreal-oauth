@@ -27,6 +27,7 @@ export async function createServer() {
     const { cookies } = getRequestEvent();
 
     const surrealToken = cookies.get(SURREAL_TOKEN);
+    const refreshToken = cookies.get(SURREAL_REFRESH);
 
     const { data: db, error: connectError } = await surrealConnect();
 
@@ -46,11 +47,11 @@ export async function createServer() {
 
     if (isExpired(surrealToken)) {
 
-        const refreshToken = cookies.get(SURREAL_REFRESH);
-
         if (!refreshToken) {
 
-            logout();
+            //logout();
+
+            console.log('No refresh token, logging out');
 
             return {
                 data: db,
@@ -65,7 +66,9 @@ export async function createServer() {
 
         if (refreshError) {
 
-            logout();
+            // logout();
+
+            console.log('Refresh error, logging out');
 
             return {
                 data: null,
@@ -132,6 +135,8 @@ export async function login(username: string, password: string) {
         };
     }
 
+    console.log(loginData);
+
     const { access, refresh } = loginData;
 
     if (refresh) {
@@ -181,6 +186,8 @@ export async function register(username: string, password: string) {
         };
     }
 
+    console.log(registerData);
+
     const { access, refresh } = registerData;
 
     if (refresh) {
@@ -207,12 +214,20 @@ export function logout() {
 
     const { cookies } = getRequestEvent();
 
-    cookies.delete(SURREAL_TOKEN, COOKIE_OPTIONS);
-    cookies.delete(SURREAL_REFRESH, COOKIE_OPTIONS);
+    const token = cookies.get(SURREAL_TOKEN);
+    const refresh = cookies.get(SURREAL_REFRESH);
+
+    if (token) {
+        cookies.delete(SURREAL_TOKEN, COOKIE_OPTIONS);
+    }
+
+    if (refresh) {
+        cookies.delete(SURREAL_REFRESH, COOKIE_OPTIONS);
+    }
 };
 
 export function getUser() {
-    
+
     const { cookies } = getRequestEvent();
 
     const token = cookies.get(SURREAL_TOKEN);
@@ -228,7 +243,7 @@ export function getUser() {
 export function getUserRecordId() {
 
     const user_id = getUser();
-    
+
     if (!user_id) {
         return null;
     }

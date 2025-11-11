@@ -10,8 +10,12 @@ export interface JwtPayload {
 }
 
 export function decodeJwt(token: string) {
-	const [, payloadB64] = token.split('.');
-	return JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as JwtPayload;
+	try {
+		const [, payloadB64] = token.split('.');
+		return JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as JwtPayload;
+	} catch {
+		return {};
+	}
 }
 
 export function isExpired(token: string) {

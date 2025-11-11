@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import { createServer } from "./surreal-server";
+import type { Surreal } from "surrealdb";
 
 type Pages = {
     description: string;
@@ -7,13 +7,7 @@ type Pages = {
     name: string;
 };
 
-export async function getPages() {
-
-    const { data: db, error: dbError } = await createServer();
-
-    if (dbError) {
-        error(500, dbError.message);
-    }
+export async function getPagesStream(db: Surreal) {
 
     const [result] = await db
         .query(

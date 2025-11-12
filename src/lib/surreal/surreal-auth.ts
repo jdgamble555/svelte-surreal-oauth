@@ -6,6 +6,7 @@ import {
     PRIVATE_SURREALDB_URL,
     PRIVATE_SURREALDB_USERNAME
 } from "$env/static/private";
+import { getRequestEvent } from "$app/server";
 
 
 const config = {
@@ -18,7 +19,9 @@ const config = {
 
 export async function surrealConnect() {
 
-    const db = new Surreal();
+    const { fetch } = getRequestEvent();
+
+    const db = new Surreal({ fetchImpl: fetch });
 
     try {
 
@@ -169,6 +172,8 @@ export async function _surrealLogin(
             },
             access: 'user'
         });
+
+        console.log('Signin data:', signinData);
 
         return {
             data: signinData,

@@ -119,7 +119,7 @@ export async function surrealRefresh(
     };
 }
 
-export async function surrealLogin(
+export async function _surrealLogin(
     _db: Surreal,
     username: string,
     password: string
@@ -155,7 +155,7 @@ export async function surrealLogin(
     };
 }
 
-export async function _surrealLogin(
+export async function surrealLogin(
     db: Surreal,
     username: string,
     password: string
